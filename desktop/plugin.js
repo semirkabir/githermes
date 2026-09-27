@@ -61,7 +61,10 @@ const TRUNK = new Set(['main', 'master', 'dev', 'develop', 'trunk'])
 // parsed as a VARIABLE NAMES command and the binary never runs — it exits 0
 // with empty stdout. Detect the shell and only prefix where it is valid.
 const POSIX_SHELL = typeof navigator === 'undefined' || !/win/i.test(navigator.platform || navigator.userAgent || '')
-const POSIX_PATH = 'PATH=/opt/homebrew/bin:/usr/local/bin:$PATH '
+// LOCAL PATCH (gh-path): /opt/data/home/bin added — gh lives there on the
+// $HERMES_HOME=/opt/data server install (dashboard process PATH omits it).
+// Ordering keeps Homebrew first on macOS; the Linux addendum is last-wins.
+const POSIX_PATH = 'PATH=/opt/homebrew/bin:/usr/local/bin:/opt/data/home/bin:/opt/data/bin:$PATH '
 const GH = `${POSIX_SHELL ? POSIX_PATH : ''}gh`
 const HERMES = `${POSIX_SHELL ? POSIX_PATH : ''}hermes`
 const PLUGIN_NAME = 'githermes'
@@ -1498,18 +1501,21 @@ function TitlebarGithubButton() {
 
   return jsx(Tip, {
     label: plan.tip,
+    placement: 'toolbar',
     children: jsx(Button, {
+      'aria-label': plan.tip,
+      // LOCAL PATCH (titlebar-shape): same shape as the app's own TitlebarToolButton —
+      // 24x24 `icon-titlebar` button with a 13.9px glyph, no padding and no text
+      // label. The cluster is a no-gap row of abutting buttons, so the old
+      // `size="sm" + px-2 + label` read as a wider, off-centre cell with a gap.
+      className:
+        'bg-transparent select-none text-muted-foreground/85 hover:bg-(--ui-control-hover-background) hover:text-foreground',
+      size: 'icon-titlebar',
       variant: 'ghost',
-      size: 'sm',
-      className: 'h-6 px-2 gap-1.5',
+      type: 'button',
       onClick: plan.action === 'collapse' ? collapseGithubPane : openGithubPane,
-      children: jsxs('span', {
-        className: 'flex items-center gap-1.5',
-        children: [
-          jsx(Codicon, { name: 'github' }),
-          jsx('span', { className: 'hidden sm:inline text-xs font-medium', children: 'GitHub' }),
-        ],
-      }),
+      onPointerDown: (event) => event.stopPropagation(),
+      children: jsx(Codicon, { className: 'leading-none', name: 'github', size: 13.9 }),
     }),
   })
 }
